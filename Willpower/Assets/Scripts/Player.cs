@@ -37,6 +37,10 @@ public class Player : MonoBehaviour
     public AudioClip shootAudio;     // 開槍音效
     [Header("鑰匙音效"), Tooltip("請提供鑰匙音效")]
     public AudioClip getKeyAudio;     // 鑰匙音效
+    [Header("攻擊範圍位移")]
+    public Vector3 offsetAtk;
+    [Header("攻擊範圍大小")]
+    public Vector3 sizeAtk;
 
     /* 私人 設定 */
     private AudioSource m_audioSource;       // 音效來源
@@ -57,6 +61,11 @@ public class Player : MonoBehaviour
         Gizmos.color = new Color(1, 0, 0, 0.35f);
         // 以角色pos為中心 繪製半徑為1.0的球形
         Gizmos.DrawSphere(transform.position + offset, radius);
+
+            // 畫出 武器有效碰撞範圍
+            // 調顏色
+            Gizmos.color = new Color(0, 1, 0, 0.5f);
+            Gizmos.DrawCube(transform.position + transform.right * offsetAtk.x + transform.up * offsetAtk.y, sizeAtk);
     }
 
     /// <summary>
@@ -120,30 +129,29 @@ public class Player : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            if (!m_animator.GetBool("equipSwd"))
-            {
-                // 觸發 拔劍動畫
-                m_animator.SetBool("equipSwd", true);
-                combo = 0;
-            }
-            else
-            {
-                // 觸發 攻擊
-                m_animator.SetInteger("attackCombo", combo++);
-                m_animator.SetTrigger("doAttack");
+            // 偵測 目前是第幾連斬
+            if (m_animator.GetCurrentAnimatorStateInfo(0).IsName("warrior_attack1"))
+                combo = 1;
+            else if (m_animator.GetCurrentAnimatorStateInfo(0).IsName("warrior_attack2"))
+                combo = 2;
+            else if (m_animator.GetCurrentAnimatorStateInfo(0).IsName("warrior_attack3"))
+                combo = 3;
+            else combo = 0;
+            m_animator.SetInteger("attackCombo", combo);
+            // 觸發 攻擊
+            m_animator.SetTrigger("doAttack");
 
-                // 音效
-                m_audioSource.PlayOneShot(shootAudio, 1.5f);
-                // 生成
-                GameObject temp = Instantiate(bullet, bulletBirthLoc.position, bulletBirthLoc.rotation);
-                temp.GetComponent<Rigidbody2D>().AddForce(bulletBirthLoc.right * bulletSpeed + bulletBirthLoc.up * 50);
-                temp.AddComponent<Bullet>().atk = bulletDamage;
-            }
-        }
-        else if (Input.GetKeyDown(KeyCode.Mouse1))
-        {
-            // 觸發 收劍動畫
-            m_animator.SetBool("equipSwd", false);
+            // 音效
+            m_audioSource.PlayOneShot(shootAudio, 1.5f);
+
+            // 近戰攻擊
+            Collider2D hit = Physics2D.OverlapBox(transform.position + transform.right * offsetAtk.x + transform.up * offsetAtk.y, sizeAtk, 0, 1 << 9);
+            if (hit) print("!!!"); //m_player.OnInjury(bulletDamage);
+
+            // 生成
+            //GameObject temp = Instantiate(bullet, bulletBirthLoc.position, bulletBirthLoc.rotation);
+            //temp.GetComponent<Rigidbody2D>().AddForce(bulletBirthLoc.right * bulletSpeed + bulletBirthLoc.up * 50);
+            //temp.AddComponent<Bullet>().atk = bulletDamage;
 
         }
     }
